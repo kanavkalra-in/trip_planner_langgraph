@@ -5,6 +5,7 @@ import httpx
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
+import os
 from src.core.config import settings
 
 # Load .env file
@@ -19,8 +20,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# API base URL - try Streamlit secrets first, then env, then default
-API_BASE_URL = st.secrets.get(
+# API base URL - from environment variable or default
+API_BASE_URL = os.getenv(
     "API_BASE_URL",
     f"http://localhost:{settings.api_port}/api/v1"
 )

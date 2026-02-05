@@ -15,9 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency files
 COPY pyproject.toml ./
 
-# Install Python dependencies
+# Install Python dependencies (suppress pip warning about running as root in build stage)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir \
+    pip install --no-cache-dir --no-warn-script-location \
     fastapi>=0.104.0 \
     uvicorn[standard]>=0.24.0 \
     streamlit>=1.28.0 \

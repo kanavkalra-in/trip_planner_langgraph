@@ -35,6 +35,7 @@ dependencies = [
     "pydantic-settings>=2.1.0",
     "python-dotenv>=1.0.0",
     "httpx>=0.25.0",
+    "gen-ai-core-lib @ file:///Users/kanavkalra/Data/genAI/projects/gen_ai_core_lib",
 ]
 
 [project.optional-dependencies]

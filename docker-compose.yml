@@ -14,13 +14,11 @@ services:
       - API_PORT=8000
       - API_RELOAD=false
       - STREAMLIT_PORT=8501
+      - API_BASE_URL=http://localhost:8000/api/v1
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DATABASE_URL=${DATABASE_URL:-}
     env_file:
       - .env
-    volumes:
-      # Mount source code for development (optional)
-      - ./src:/app/src:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
