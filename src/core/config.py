@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # LangGraph/OpenAI Settings
     openai_api_key: Optional[str] = None
     
+    # Serper API Settings (for flight search)
+    serper_api_key: Optional[str] = None
+    
     # Database Settings (for future use)
     database_url: Optional[str] = None
     
