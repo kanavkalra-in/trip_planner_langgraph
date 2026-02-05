@@ -3,8 +3,8 @@ version: '3.8'
 services:
   trip-planner:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: trip_planner_langgraph/Dockerfile
     container_name: trip-planner-app
     ports:
       - "${API_PORT:-8000}:8000"  # FastAPI

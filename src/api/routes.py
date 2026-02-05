@@ -1,8 +1,13 @@
 """API routes for Trip Planner."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Annotated
+
+from gen_ai_core_lib.dependencies.application_container import ApplicationContainer
+from gen_ai_core_lib.dependencies.llm_dependencies import get_container
+from gen_ai_core_lib.dependencies.session_dependencies import get_session_from_headers
+from gen_ai_core_lib.session.session_manager import Session
 
 router = APIRouter()
 
@@ -24,19 +29,31 @@ class TripResponse(BaseModel):
 
 
 @router.post("/trip/plan", response_model=TripResponse)
-async def plan_trip(request: TripRequest):
+async def plan_trip(
+    request: TripRequest,
+    session: Annotated[Session, Depends(get_session_from_headers)],
+    container: Annotated[ApplicationContainer, Depends(get_container)],
+):
     """
     Plan a trip based on destination and preferences.
     
     Args:
         request: Trip planning request with destination and preferences
+        session: User session (automatically created or retrieved from headers/cookies)
+        container: Application container with access to LLM manager, memory manager, etc.
         
     Returns:
         TripResponse with itinerary and details
     """
     try:
+        # Access services from container
+        session_manager = container.get_session_manager()
+        llm_manager = container.get_llm_manager()
+        memory_manager = container.get_memory_manager()
+        
         # TODO: Integrate with LangGraph for trip planning
         # This is a placeholder implementation
+        # Session is available for tracking user context across requests
         itinerary = [
             {
                 "day": 1,

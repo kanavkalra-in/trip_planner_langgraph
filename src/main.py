@@ -3,8 +3,14 @@
 import sys
 import threading
 import subprocess
+from contextlib import asynccontextmanager
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Add parent directory to path to allow imports when running directly
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Load .env file before importing other modules
 env_path = Path(__file__).parent.parent / ".env"
@@ -14,11 +20,30 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
 from src.core.config import settings
+from gen_ai_core_lib.dependencies.application_container import ApplicationContainer
+from gen_ai_core_lib.config.logging_config import logger
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI app startup and shutdown."""
+    # Startup: Initialize application container
+    logger.info("Initializing application container...")
+    container = ApplicationContainer()
+    app.state.container = container
+    logger.info("Application container initialized and stored in app state")
+    
+    yield
+    
+    # Shutdown: Cleanup (if needed)
+    logger.info("Shutting down application...")
+
 
 app = FastAPI(
     title="Trip Planner API",
     description="API for Trip Planner application with LangGraph",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # Configure CORS
