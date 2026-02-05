@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  trip-planner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trip-planner-app
+    ports:
+      - "${API_PORT:-8000}:8000"  # FastAPI
+      - "${STREAMLIT_PORT:-8501}:8501"  # Streamlit
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_RELOAD=false
+      - STREAMLIT_PORT=8501
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+    env_file:
+      - .env
+    volumes:
+      # Mount source code for development (optional)
+      - ./src:/app/src:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Alternative: Separate services (uncomment to use)
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: trip-planner-api
+  #   command: ["python", "-m", "src.main", "api"]
+  #   ports:
+  #     - "${API_PORT:-8000}:8000"
+  #   environment:
+  #     - API_HOST=0.0.0.0
+  #     - API_PORT=8000
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+  #   env_file:
+  #     - .env
+  #   restart: unless-stopped
+  #
+  # streamlit:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: trip-planner-streamlit
+  #   command: ["python", "-m", "src.main", "streamlit"]
+  #   ports:
+  #     - "${STREAMLIT_PORT:-8501}:8501"
+  #   environment:
+  #     - STREAMLIT_PORT=8501
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - api
+  #   restart: unless-stopped
