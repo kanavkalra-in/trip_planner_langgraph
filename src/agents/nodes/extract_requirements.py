@@ -7,14 +7,21 @@ from .base_node import BaseNode
 from src.agents.trip_state import TripState, TripView
 from src.agents.utils.json_parser import parse_json_response
 from src.agents.prompts.extract_requirements_prompts import EXTRACT_REQUIREMENTS_PROMPT
+from gen_ai_core_lib.llm.llm_manager import get_default_llm_manager
 from gen_ai_core_lib.config.logging_config import logger
 
 
 class ExtractRequirementsNode(BaseNode):
     """Node that extracts structured requirements from user input."""
     
-    def __init__(self, llm):
-        super().__init__(llm, "extract_requirements")
+    def __init__(
+        self, 
+        model_name: str = "gpt-4o",
+        temperature: float = 0.7
+    ):
+        super().__init__(None, "extract_requirements")
+        self.model_name = model_name
+        self.temperature = temperature
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", EXTRACT_REQUIREMENTS_PROMPT),
             ("human", "User input: {user_input}")
@@ -45,7 +52,9 @@ class ExtractRequirementsNode(BaseNode):
             }
         
         try:
-            chain = self.prompt | self.llm
+            llm_manager = get_default_llm_manager()
+            llm = llm_manager.get_llm(model_name=self.model_name, temperature=self.temperature)
+            chain = self.prompt | llm
             response = chain.invoke({"user_input": combined_input})
             extracted = parse_json_response(response)
             

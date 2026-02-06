@@ -1,24 +1,25 @@
 """Base node class for trip planner graph nodes."""
 from abc import ABC, abstractmethod
-from typing import Dict, Any
-from langchain_core.language_models import BaseChatModel
+from typing import Dict, Any, Optional
 
 from src.agents.trip_state import TripState
+from gen_ai_core_lib.llm.llm_manager import LLMManager
 from gen_ai_core_lib.config.logging_config import logger
 
 
 class BaseNode(ABC):
     """Base class for all trip planner graph nodes."""
     
-    def __init__(self, llm: BaseChatModel, node_name: str):
+    def __init__(self, llm_manager: Optional[LLMManager] = None, node_name: str = ""):
         """
         Initialize the node.
         
         Args:
-            llm: Language model instance
+            llm_manager: Optional LLM manager instance for creating LLMs on-demand.
+                       Nodes that need LLMs can use this to get LLM instances.
             node_name: Name of this node (for logging)
         """
-        self.llm = llm
+        self.llm_manager = llm_manager
         self.node_name = node_name
     
     @abstractmethod

@@ -7,14 +7,21 @@ from .base_node import BaseNode
 from src.agents.trip_state import TripState, TripView
 from src.agents.utils.json_parser import parse_json_response
 from src.agents.prompts.identify_attractions_and_plan_prompts import IDENTIFY_ATTRACTIONS_AND_GENERATE_PLAN_PROMPT
+from gen_ai_core_lib.llm.llm_manager import get_default_llm_manager
 from gen_ai_core_lib.config.logging_config import logger
 
 
 class IdentifyAttractionsAndPlanNode(BaseNode):
     """Node that identifies attractions and generates detailed day-wise plan in one step."""
     
-    def __init__(self, llm):
-        super().__init__(llm, "identify_attractions_and_plan")
+    def __init__(
+        self, 
+        model_name: str = "gpt-4o",
+        temperature: float = 0.7
+    ):
+        super().__init__(None, "identify_attractions_and_plan")
+        self.model_name = model_name
+        self.temperature = temperature
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", IDENTIFY_ATTRACTIONS_AND_GENERATE_PLAN_PROMPT),
             ("human", """Destination: {destination}
@@ -48,7 +55,9 @@ Identify attractions that match these criteria and create a detailed day-by-day 
             }
         
         try:
-            chain = self.prompt | self.llm
+            llm_manager = get_default_llm_manager()
+            llm = llm_manager.get_llm(model_name=self.model_name, temperature=self.temperature)
+            chain = self.prompt | llm
             response = chain.invoke({
                 "destination": view.destination,
                 "duration": view.duration_days or "not specified",

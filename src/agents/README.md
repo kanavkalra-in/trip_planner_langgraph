@@ -23,7 +23,7 @@ from src.agents import TripPlannerGraph
 # Initialize
 container = ApplicationContainer()
 llm_manager = container.get_llm_manager()
-planner = TripPlannerGraph(llm_manager, model_name="gpt-4o")
+planner = TripPlannerGraph(llm_manager)
 
 # Run planner
 initial_state = {

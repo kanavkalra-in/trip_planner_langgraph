@@ -10,8 +10,8 @@ from src.agents.trip_state import TripState, TripView
 class AskClarifyingQuestionsNode(BaseNode):
     """Node that asks clarifying questions for missing information."""
     
-    def __init__(self, llm):
-        super().__init__(llm, "ask_clarifying_questions")
+    def __init__(self):
+        super().__init__(None, "ask_clarifying_questions")
     
     def _generate_questions_for_missing_fields(self, missing_fields: list[str]) -> list[str]:
         """

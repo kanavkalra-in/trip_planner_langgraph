@@ -11,8 +11,8 @@ from gen_ai_core_lib.config.logging_config import logger
 class CheckMissingInfoNode(BaseNode):
     """Node that checks for missing critical information."""
     
-    def __init__(self, llm, clarification_loop_limit: int = 2):
-        super().__init__(llm, "check_missing_info")
+    def __init__(self, clarification_loop_limit: int = 2):
+        super().__init__(None, "check_missing_info")
         self.clarification_loop_limit = clarification_loop_limit
     
     def _generate_questions_for_missing_fields(self, missing_fields: list[str]) -> list[str]:

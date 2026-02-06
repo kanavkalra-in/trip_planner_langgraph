@@ -4,7 +4,6 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
 
-from gen_ai_core_lib.llm.llm_manager import LLMManager
 from gen_ai_core_lib.config.logging_config import logger
 from src.agents.trip_state import TripState
 from src.agents.nodes.extract_requirements import ExtractRequirementsNode
@@ -29,46 +28,37 @@ class TripPlannerGraph:
     
     def __init__(
         self, 
-        llm_manager: LLMManager, 
-        model_name: str = "gpt-4o",
         clarification_loop_limit: int = DEFAULT_CLARIFICATION_LOOP_LIMIT,
         recursion_limit: int = DEFAULT_RECURSION_LIMIT,
-        temperature: float = DEFAULT_TEMPERATURE,
         checkpointer = None
     ):
         """
         Initialize the trip planner graph.
         
         Args:
-            llm_manager: LLM manager instance for creating LLM instances
-            model_name: Name of the model to use (default: "gpt-4o")
             clarification_loop_limit: Maximum number of clarification loops (default: 2)
             recursion_limit: Maximum recursion depth for graph execution (default: 50)
-            temperature: LLM temperature setting (default: 0.7)
             checkpointer: Optional checkpointer for state persistence (defaults to MemorySaver)
         """
-        self.llm_manager = llm_manager
-        self.model_name = model_name
         self.clarification_loop_limit = clarification_loop_limit
         self.recursion_limit = recursion_limit
-        self.temperature = temperature
         
-        # Eager initialization
-        self.llm = llm_manager.get_llm(model_name=model_name, temperature=temperature)
         self.nodes = self._create_nodes()
         self.graph = self._build_graph(checkpointer=checkpointer)
     
     def _create_nodes(self) -> Dict[str, Any]:
-        """Create and return all node instances."""
+        """
+        Create and return all node instances.
+        Nodes will fetch LLM manager themselves when needed.
+        """
         return {
-            "extract_requirements": ExtractRequirementsNode(self.llm),
+            "extract_requirements": ExtractRequirementsNode(),
             "check_missing_info": CheckMissingInfoNode(
-                self.llm, 
                 clarification_loop_limit=self.clarification_loop_limit
             ),
-            "ask_clarifying_questions": AskClarifyingQuestionsNode(self.llm),
-            "identify_attractions_and_plan": IdentifyAttractionsAndPlanNode(self.llm),
-            "optimize_and_format_final_plan": OptimizeAndFormatFinalPlanNode(self.llm),
+            "ask_clarifying_questions": AskClarifyingQuestionsNode(),
+            "identify_attractions_and_plan": IdentifyAttractionsAndPlanNode(),
+            "optimize_and_format_final_plan": OptimizeAndFormatFinalPlanNode(),
         }
     
     def _build_graph(self, checkpointer=None):
