@@ -20,11 +20,12 @@ def get_trip_planner(
     """
     Get the TripPlannerGraph instance via dependency injection.
     
-    The container is initialized once with the LLM manager.
-    The graph is a singleton and can be safely reused across requests.
+    The container is initialized once. The graph nodes will get the LLM manager
+    directly via get_default_llm_manager() which accesses the global registry
+    set by ApplicationContainer.
     
     Args:
-        app_container: Application container with LLM manager
+        app_container: Application container (ensures it's initialized)
         
     Returns:
         TripPlannerGraph instance (singleton)
@@ -33,6 +34,5 @@ def get_trip_planner(
     
     if _container is None:
         _container = TripPlannerContainer()
-        _container.llm_manager.override(app_container.get_llm_manager())
     
     return _container.planner()
