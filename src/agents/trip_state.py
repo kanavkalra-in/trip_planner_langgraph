@@ -21,7 +21,8 @@ class TripState(TypedDict):
     destination: Optional[str]
     duration_days: Optional[int]
     budget: Optional[float]
-    travel_dates: Optional[str]  # e.g., "2024-06-15 to 2024-06-20"
+    travel_start_date: Optional[str]  # e.g., "2024-06-15"
+    travel_end_date: Optional[str]  # e.g., "2024-06-20"
     preferences: Annotated[List[str], add]  # Use reducer for list accumulation
     group_size: Optional[int]
     accommodation_type: Optional[str]  # e.g., "hotel", "hostel", "airbnb"

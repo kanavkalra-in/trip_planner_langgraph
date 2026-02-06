@@ -21,10 +21,21 @@ class ExtractRequirementsNode(BaseNode):
         ])
     
     def execute(self, state: TripState) -> Dict[str, Any]:
-        """Extract structured requirements from user input."""
+        """Extract structured requirements from user input and user responses."""
         user_input = state.get("user_input", "")
+        user_responses = state.get("user_responses", {})
         
-        if not user_input:
+        # Combine user_input with user_responses for extraction
+        # When resuming after an interrupt, user_responses contain answers to clarifying questions
+        combined_input = user_input
+        if user_responses:
+            # Format user_responses as additional context
+            responses_text = "\n\nUser responses to clarifying questions:\n"
+            for key, value in user_responses.items():
+                responses_text += f"- {key}: {value}\n"
+            combined_input = f"{user_input}\n{responses_text}" if user_input else responses_text
+        
+        if not combined_input:
             return {
                 "extracted_requirements": {},
                 "current_step": self.node_name,
@@ -34,7 +45,7 @@ class ExtractRequirementsNode(BaseNode):
         
         try:
             chain = self.prompt | self.llm
-            response = chain.invoke({"user_input": user_input})
+            response = chain.invoke({"user_input": combined_input})
             extracted = parse_json_response(response)
             
             # Build partial state update
@@ -45,7 +56,7 @@ class ExtractRequirementsNode(BaseNode):
             
             # Map extracted values to state fields
             field_mapping = [
-                "destination", "duration_days", "budget", "travel_dates",
+                "destination", "duration_days", "budget", "travel_start_date", "travel_end_date",
                 "preferences", "group_size", "accommodation_type"
             ]
             for field in field_mapping:

@@ -19,7 +19,8 @@ class GenerateDayWisePlanNode(BaseNode):
             ("system", GENERATE_DAY_WISE_PLAN_PROMPT),
             ("human", """Destination: {destination}
 Duration: {duration} days
-Travel Dates: {travel_dates}
+Travel Start Date: {travel_start_date}
+Travel End Date: {travel_end_date}
 Preferences: {preferences}
 Attractions: {attractions}
 
@@ -31,7 +32,8 @@ Create a detailed day-by-day plan with specific times and activities, organizing
         attractions = state.get("attractions", [])
         duration = state.get("duration_days")
         preferences = state.get("preferences", [])
-        travel_dates = state.get("travel_dates", "not specified")
+        travel_start_date = state.get("travel_start_date", "not specified")
+        travel_end_date = state.get("travel_end_date", "not specified")
         
         if not attractions:
             return {
@@ -46,7 +48,8 @@ Create a detailed day-by-day plan with specific times and activities, organizing
             response = chain.invoke({
                 "destination": state.get("destination", "Unknown"),
                 "duration": duration or len(attractions),
-                "travel_dates": travel_dates,
+                "travel_start_date": travel_start_date,
+                "travel_end_date": travel_end_date,
                 "preferences": ", ".join(preferences) if preferences else "none specified",
                 "attractions": json.dumps(attractions)
             })

@@ -7,7 +7,7 @@ First, mentally organize attractions into logical daily themes, then create the 
 
 Return a JSON array of day plans, each with:
 - day: integer
-- date: string (if travel_dates provided, otherwise "Day X")
+- date: string (if travel_start_date provided, otherwise "Day X")
 - theme: string (e.g., "Cultural Day", "Beach Day")
 - activities: array of objects, each with:
   - time: string (e.g., "09:00", "14:30")

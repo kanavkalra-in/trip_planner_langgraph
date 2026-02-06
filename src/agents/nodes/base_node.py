@@ -37,14 +37,6 @@ class BaseNode(ABC):
     def __call__(self, state: TripState) -> Dict[str, Any]:
         """Make node callable for LangGraph."""
         logger.info(f"Executing node: {self.node_name}")
-        try:
-            result = self.execute(state)
-            logger.info(f"Node {self.node_name} completed successfully")
-            return result
-        except Exception as e:
-            logger.error(f"Error in node {self.node_name}: {e}", exc_info=True)
-            return {
-                "status": "error",
-                "current_step": self.node_name,
-                "errors": [f"Error in {self.node_name}: {str(e)}"]
-            }
+        result = self.execute(state)
+        logger.info(f"Node {self.node_name} completed successfully")
+        return result

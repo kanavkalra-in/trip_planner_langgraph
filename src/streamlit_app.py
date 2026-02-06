@@ -80,6 +80,8 @@ def plan_trip_tab(api_url: str):
         st.session_state.last_api_response = None
     if "is_processing" not in st.session_state:
         st.session_state.is_processing = False
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = None  # Store thread_id for resuming conversations
     
     # Display chat history
     for message in st.session_state.chat_messages:
@@ -151,22 +153,41 @@ def plan_trip_tab(api_url: str):
         st.session_state.accumulated_responses = {}
         st.session_state.current_trip_plan = None
         st.session_state.last_api_response = None
+        st.session_state.thread_id = None  # Clear thread_id for new trip
         st.rerun()
 
 
 def process_user_message(api_url: str, user_input: str):
     """Process a user message in the chat and call the API."""
-    # Merge with accumulated responses (accumulate all information across conversation)
-    accumulated = st.session_state.accumulated_responses.copy()
-    # Store the current user input in accumulated responses
-    accumulated["last_input"] = user_input
-    st.session_state.accumulated_responses = accumulated
+    # Determine if we're resuming (user providing responses to clarifying questions)
+    # or starting a new conversation
+    is_resuming = (
+        st.session_state.get("thread_id") is not None and
+        st.session_state.get("pending_questions") is not None
+    )
     
-    # Build request data - chat conversation only
-    request_data = {
-        "user_input": user_input,  # Current user input
-        "user_responses": accumulated,  # All accumulated responses from conversation
-    }
+    if is_resuming:
+        # Resuming: user is providing responses to clarifying questions
+        # Map user input to the missing fields/questions
+        accumulated = st.session_state.accumulated_responses.copy()
+        # Store user input as response (you might want to parse this better)
+        accumulated["last_input"] = user_input
+        st.session_state.accumulated_responses = accumulated
+        
+        request_data = {
+            "thread_id": st.session_state.thread_id,  # Include thread_id for resuming
+            "user_responses": accumulated,  # User responses to clarifying questions
+        }
+    else:
+        # New conversation or continuing
+        accumulated = st.session_state.accumulated_responses.copy()
+        accumulated["last_input"] = user_input
+        st.session_state.accumulated_responses = accumulated
+        
+        request_data = {
+            "user_input": user_input,  # Current user input
+            "thread_id": st.session_state.thread_id,  # Include thread_id if available
+        }
     
     # Call the API with loading indicator
     try:
@@ -175,12 +196,17 @@ def process_user_message(api_url: str, user_input: str):
             response = plan_trip_api(
                 api_url,
                 user_input=request_data.get("user_input"),
-                user_responses=request_data.get("user_responses", {}),
+                user_responses=request_data.get("user_responses"),
+                thread_id=request_data.get("thread_id"),
             )
         
         if response:
             # Store the response
             st.session_state.last_api_response = response
+            
+            # Store thread_id from response (for resuming conversations)
+            if response.get("thread_id"):
+                st.session_state.thread_id = response["thread_id"]
             
             # Handle the response
             status = response.get("status", "unknown")
@@ -219,6 +245,7 @@ def process_user_message(api_url: str, user_input: str):
                 # Clear clarification state
                 st.session_state.pending_questions = None
                 st.session_state.missing_info = None
+                # Keep thread_id even after completion (in case user wants to continue)
                 
                 # Add assistant message
                 st.session_state.chat_messages.append({
@@ -285,27 +312,37 @@ def about_tab():
 
 def plan_trip_api(
     api_url: str,
-    user_input: str,
+    user_input: Optional[str] = None,
     user_responses: Optional[dict] = None,
+    thread_id: Optional[str] = None,
 ) -> Optional[dict]:
     """
-    Call the trip planning API - chat conversation only.
+    Call the trip planning API with thread_id support for resuming conversations.
     
     Args:
         api_url: Base API URL
-        user_input: Natural language user input (required)
-        user_responses: Accumulated responses from conversation
+        user_input: Natural language user input (required for new requests)
+        user_responses: User responses to clarifying questions (for resuming)
+        thread_id: Thread ID for resuming existing conversation
         
     Returns:
         Trip plan response or None
     """
     try:
         with httpx.Client(timeout=120.0) as client:  # Increased timeout for LangGraph processing
-            request_data = {
-                "user_input": user_input,
-            }
+            request_data = {}
+            
+            # Include user_input if provided (for new requests)
+            if user_input:
+                request_data["user_input"] = user_input
+            
+            # Include user_responses if provided (for resuming)
             if user_responses:
                 request_data["user_responses"] = user_responses
+            
+            # Include thread_id if provided (for resuming or continuing)
+            if thread_id:
+                request_data["thread_id"] = thread_id
             
             response = client.post(
                 f"{api_url}/trip/plan",

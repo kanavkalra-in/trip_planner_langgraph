@@ -4,5 +4,6 @@
 QUESTION_TEMPLATES = {
     "destination": "What is your travel destination?",
     "duration_days": "How many days will your trip be?",
-    "travel_dates": "What are your travel dates? (format: YYYY-MM-DD to YYYY-MM-DD)",
+    "travel_start_date": "What is your travel start date? (format: YYYY-MM-DD)",
+    "travel_end_date": "What is your travel end date? (format: YYYY-MM-DD)",
 }
