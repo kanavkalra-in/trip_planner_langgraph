@@ -4,7 +4,7 @@ from typing import Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from .base_node import BaseNode
-from src.agents.trip_state import TripState
+from src.agents.trip_state import TripState, TripView
 from src.agents.utils.json_parser import parse_json_response
 from src.agents.prompts.generate_plan_prompts import GENERATE_DAY_WISE_PLAN_PROMPT
 from gen_ai_core_lib.config.logging_config import logger
@@ -29,11 +29,8 @@ Create a detailed day-by-day plan with specific times and activities, organizing
     
     def execute(self, state: TripState) -> Dict[str, Any]:
         """Generate detailed day-wise plan directly from attractions."""
-        attractions = state.get("attractions", [])
-        duration = state.get("duration_days")
-        preferences = state.get("preferences", [])
-        travel_start_date = state.get("travel_start_date", "not specified")
-        travel_end_date = state.get("travel_end_date", "not specified")
+        view = TripView(state)
+        attractions = view.attractions or []
         
         if not attractions:
             return {
@@ -46,11 +43,11 @@ Create a detailed day-by-day plan with specific times and activities, organizing
         try:
             chain = self.prompt | self.llm
             response = chain.invoke({
-                "destination": state.get("destination", "Unknown"),
-                "duration": duration or len(attractions),
-                "travel_start_date": travel_start_date,
-                "travel_end_date": travel_end_date,
-                "preferences": ", ".join(preferences) if preferences else "none specified",
+                "destination": view.destination or "Unknown",
+                "duration": view.duration_days or len(attractions),
+                "travel_start_date": view.travel_start_date or "not specified",
+                "travel_end_date": view.travel_end_date or "not specified",
+                "preferences": view.format_preferences(),
                 "attractions": json.dumps(attractions)
             })
             
