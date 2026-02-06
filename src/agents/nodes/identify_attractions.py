@@ -4,7 +4,7 @@ from typing import Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from .base_node import BaseNode
-from src.agents.trip_state import TripState
+from src.agents.trip_state import TripState, TripView
 from src.agents.utils.json_parser import parse_json_response
 from src.agents.prompts.identify_attractions_prompts import IDENTIFY_ATTRACTIONS_PROMPT
 from gen_ai_core_lib.config.logging_config import logger
@@ -26,11 +26,9 @@ Identify attractions that match these criteria.""")
     
     def execute(self, state: TripState) -> Dict[str, Any]:
         """Identify attractions based on requirements."""
-        destination = state.get("destination")
-        preferences = state.get("preferences", [])
-        duration = state.get("duration_days")
+        view = TripView(state)
         
-        if not destination:
+        if not view.destination:
             return {
                 "attractions": [],
                 "current_step": self.node_name,
@@ -41,9 +39,9 @@ Identify attractions that match these criteria.""")
         try:
             chain = self.prompt | self.llm
             response = chain.invoke({
-                "destination": destination,
-                "duration": duration or "not specified",
-                "preferences": ", ".join(preferences) if preferences else "none specified"
+                "destination": view.destination,
+                "duration": view.duration_days or "not specified",
+                "preferences": view.format_preferences()
             })
             
             attractions = parse_json_response(response)

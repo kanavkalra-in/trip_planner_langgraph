@@ -4,7 +4,7 @@ from typing import Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from .base_node import BaseNode
-from src.agents.trip_state import TripState
+from src.agents.trip_state import TripState, TripView
 from src.agents.prompts.optimize_plan_prompts import OPTIMIZE_AND_FORMAT_PLAN_PROMPT
 from gen_ai_core_lib.config.logging_config import logger
 
@@ -26,10 +26,8 @@ Optimize this itinerary for efficiency and format it into a beautiful, readable 
     
     def execute(self, state: TripState) -> Dict[str, Any]:
         """Optimize and format the final plan for output."""
-        day_plan = state.get("day_wise_plan", [])
-        destination = state.get("destination", "Unknown")
-        duration = state.get("duration_days", "Unknown")
-        budget = state.get("budget")
+        view = TripView(state)
+        day_plan = view.day_wise_plan or []
         
         if not day_plan:
             return {
@@ -41,9 +39,9 @@ Optimize this itinerary for efficiency and format it into a beautiful, readable 
         try:
             chain = self.prompt | self.llm
             response = chain.invoke({
-                "destination": destination,
-                "duration": duration,
-                "budget": f"${budget:,.2f}" if budget else "Not specified",
+                "destination": view.destination or "Unknown",
+                "duration": view.duration_days or "Unknown",
+                "budget": view.format_budget(),
                 "itinerary": json.dumps(day_plan)
             })
             
@@ -58,7 +56,7 @@ Optimize this itinerary for efficiency and format it into a beautiful, readable 
         except Exception as e:
             logger.error(f"Error optimizing and formatting final plan: {e}", exc_info=True)
             # Fallback formatting without optimization
-            fallback = f"Trip Plan for {destination} ({duration} days)\n\n"
+            fallback = f"Trip Plan for {view.destination or 'Unknown'} ({view.duration_days or 'Unknown'} days)\n\n"
             for day in day_plan:
                 fallback += f"Day {day.get('day', '?')}: {day.get('theme', '')}\n"
                 for activity in day.get('activities', []):

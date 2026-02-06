@@ -10,8 +10,7 @@ from src.agents.trip_state import TripState
 from src.agents.nodes.extract_requirements import ExtractRequirementsNode
 from src.agents.nodes.check_missing_info import CheckMissingInfoNode
 from src.agents.nodes.ask_clarifying_questions import AskClarifyingQuestionsNode
-from src.agents.nodes.identify_attractions import IdentifyAttractionsNode
-from src.agents.nodes.generate_day_wise_plan import GenerateDayWisePlanNode
+from src.agents.nodes.identify_attractions_and_plan import IdentifyAttractionsAndPlanNode
 from src.agents.nodes.optimize_and_format_final_plan import OptimizeAndFormatFinalPlanNode
 
 
@@ -68,8 +67,7 @@ class TripPlannerGraph:
                 clarification_loop_limit=self.clarification_loop_limit
             ),
             "ask_clarifying_questions": AskClarifyingQuestionsNode(self.llm),
-            "identify_attractions": IdentifyAttractionsNode(self.llm),
-            "generate_day_wise_plan": GenerateDayWisePlanNode(self.llm),
+            "identify_attractions_and_plan": IdentifyAttractionsAndPlanNode(self.llm),
             "optimize_and_format_final_plan": OptimizeAndFormatFinalPlanNode(self.llm),
         }
     
@@ -101,7 +99,7 @@ class TripPlannerGraph:
             self._should_ask_questions,
             {
                 "ask_questions": "ask_clarifying_questions",
-                "continue": "identify_attractions",
+                "continue": "identify_attractions_and_plan",
                 "stop_needs_info": END
             }
         )
@@ -118,8 +116,7 @@ class TripPlannerGraph:
         )
         
         # Planning flow
-        workflow.add_edge("identify_attractions", "generate_day_wise_plan")
-        workflow.add_edge("generate_day_wise_plan", "optimize_and_format_final_plan")
+        workflow.add_edge("identify_attractions_and_plan", "optimize_and_format_final_plan")
         workflow.add_edge("optimize_and_format_final_plan", END)
         
         # Use checkpointer for interrupt support (required by LangGraph)
@@ -251,9 +248,14 @@ class TripPlannerGraph:
                 "budget": initial_state.get("budget"),
                 "travel_start_date": initial_state.get("travel_start_date"),
                 "travel_end_date": initial_state.get("travel_end_date"),
+                "daily_itinerary_start_time": initial_state.get("daily_itinerary_start_time"),
+                "daily_itinerary_end_time": initial_state.get("daily_itinerary_end_time"),
                 "preferences": initial_state.get("preferences") or [],
                 "group_size": initial_state.get("group_size"),
                 "accommodation_type": initial_state.get("accommodation_type"),
+                "accommodation_amenities": initial_state.get("accommodation_amenities") or [],
+                "transport_preferences": initial_state.get("transport_preferences") or [],
+                "additional_requirements": initial_state.get("additional_requirements") or [],
                 "extracted_requirements": None,
                 "missing_info": [],
                 "has_missing_info": None,

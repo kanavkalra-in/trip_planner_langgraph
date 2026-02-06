@@ -9,11 +9,8 @@ The trip planner uses a StateGraph with the following nodes:
 1. **extract_requirements**: Extracts structured requirements from user input (does not invent missing data)
 2. **check_missing_info**: Identifies missing critical information
 3. **ask_clarifying_questions**: Generates questions for missing information (loops back to check_missing_info)
-4. **identify_attractions**: Identifies relevant attractions based on requirements
-5. **create_itinerary_outline**: Creates high-level itinerary structure
-6. **generate_day_wise_plan**: Generates detailed day-by-day plan with times
-7. **optimize_itinerary**: Optimizes itinerary for efficiency
-8. **format_final_plan**: Formats final plan for output
+4. **identify_attractions_and_plan**: Identifies relevant attractions and generates detailed day-by-day plan with times (merged for efficiency)
+5. **optimize_and_format_final_plan**: Optimizes itinerary for efficiency and formats final plan for output
 
 ## Usage
 

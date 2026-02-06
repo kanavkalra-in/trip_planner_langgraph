@@ -4,7 +4,7 @@ from typing import Dict, Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from .base_node import BaseNode
-from src.agents.trip_state import TripState
+from src.agents.trip_state import TripState, TripView
 from src.agents.utils.json_parser import parse_json_response
 from src.agents.prompts.extract_requirements_prompts import EXTRACT_REQUIREMENTS_PROMPT
 from gen_ai_core_lib.config.logging_config import logger
@@ -22,8 +22,9 @@ class ExtractRequirementsNode(BaseNode):
     
     def execute(self, state: TripState) -> Dict[str, Any]:
         """Extract structured requirements from user input and user responses."""
-        user_input = state.get("user_input", "")
-        user_responses = state.get("user_responses", {})
+        view = TripView(state)
+        user_input = view.user_input or ""
+        user_responses = view.user_responses
         
         # Combine user_input with user_responses for extraction
         # When resuming after an interrupt, user_responses contain answers to clarifying questions
@@ -54,14 +55,40 @@ class ExtractRequirementsNode(BaseNode):
                 "current_step": self.node_name
             }
             
-            # Map extracted values to state fields
+            # Map all extracted values to state fields
+            # This ensures all extracted information flows through the graph state
             field_mapping = [
-                "destination", "duration_days", "budget", "travel_start_date", "travel_end_date",
-                "preferences", "group_size", "accommodation_type"
+                "destination",
+                "duration_days",
+                "budget",
+                "travel_start_date",
+                "travel_end_date",
+                "daily_itinerary_start_time",
+                "daily_itinerary_end_time",
+                "group_size",
+                "accommodation_type",
             ]
+            
+            # Map simple fields
             for field in field_mapping:
                 if field in extracted and extracted[field] is not None:
                     updates[field] = extracted[field]
+            
+            # Map list fields (these use Annotated[List, add] reducers in TripState)
+            list_fields = [
+                "preferences",
+                "accommodation_amenities",
+                "transport_preferences",
+                "additional_requirements",
+            ]
+            for field in list_fields:
+                if field in extracted and extracted[field] is not None:
+                    # Ensure it's a list
+                    value = extracted[field]
+                    if isinstance(value, list):
+                        updates[field] = value
+                    elif value:  # If it's a single value, wrap it in a list
+                        updates[field] = [value]
             
             return updates
         except json.JSONDecodeError as e:

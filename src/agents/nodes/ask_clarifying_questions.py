@@ -4,7 +4,7 @@ from langgraph.types import interrupt
 
 from .base_node import BaseNode
 from .constants import QUESTION_TEMPLATES
-from src.agents.trip_state import TripState
+from src.agents.trip_state import TripState, TripView
 
 
 class AskClarifyingQuestionsNode(BaseNode):
@@ -37,7 +37,9 @@ class AskClarifyingQuestionsNode(BaseNode):
         - First time: pauses execution immediately (raises GraphInterrupt internally)
         - When resumed: interrupt() returns the resume value (user_responses)
         """
-        missing_info = state.get("missing_info", [])
+        view = TripView(state)
+        missing_info = view.missing_info
+        
         if not missing_info:
             return {
                 "clarifying_questions": [],
@@ -49,7 +51,7 @@ class AskClarifyingQuestionsNode(BaseNode):
         questions = self._generate_questions_for_missing_fields(missing_info)
         
         # Increment loop counter to track how many times we've asked
-        current_loop_count = state.get("clarification_loop_count", 0)
+        current_loop_count = view.clarification_loop_count
         
         # Call interrupt() - this will:
         # - First time: pause execution immediately (raises GraphInterrupt internally)
