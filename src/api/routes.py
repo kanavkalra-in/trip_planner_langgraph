@@ -16,9 +16,10 @@ router = APIRouter()
 
 class TripRequest(BaseModel):
     """Request model for trip planning - chat conversation only."""
-    user_input: Optional[str] = None  # Required for new requests, optional when resuming
-    user_responses: Optional[Dict[str, str]] = None  # For responding to clarifying questions (resume value)
+    user_input: Optional[str] = None  # Required for new requests, updated requests, and resume values
     thread_id: Optional[str] = None  # Optional thread_id for resuming existing conversation
+    thumbs_up: Optional[bool] = None  # User thumbs up feedback (ends workflow)
+    thumbs_down: Optional[bool] = None  # User thumbs down feedback (ends workflow)
 
 
 class TripResponse(BaseModel):
@@ -49,12 +50,15 @@ async def plan_trip(
     Following LangGraph interrupt patterns (https://docs.langchain.com/oss/python/langgraph/interrupts):
     - Uses thread_id (session_id) for state persistence
     - Detects interrupts via __interrupt__ field
-    - Resumes with user_responses when provided
+    - Resumes with user_input when provided
+    - Supports iteration: user_input allows providing additional instructions after plan is displayed
+    - Supports feedback: thumbs_up/thumbs_down ends the workflow
     
     Args:
         request: Trip planning request
-            - user_input: Required for new requests
-            - user_responses: Optional, used to resume from interrupt
+            - user_input: Required for new requests, updated requests, and resume values
+            - thumbs_up: Optional, user thumbs up feedback (ends workflow)
+            - thumbs_down: Optional, user thumbs down feedback (ends workflow)
         session: User session (automatically created or retrieved from headers/cookies)
         planner: Trip planner graph (injected via dependency injection, singleton)
         
@@ -76,13 +80,18 @@ async def plan_trip(
         logger.info(f"Starting new conversation with thread_id: {thread_id}")
     
     # Determine if we're resuming from an interrupt
-    is_resuming = request.user_responses is not None and len(request.user_responses) > 0
+    is_resuming = request.thread_id is not None
     
     if is_resuming:
-        # Resuming from interrupt - user_responses becomes the resume value
+        # Resuming from interrupt - user_input becomes the resume value
         # The resume value is passed to Command(resume=...) and becomes the return value of interrupt()
-        resume_value = request.user_responses
-        logger.info(f"Resuming graph execution with user responses: {list(resume_value.keys())}")
+        if not request.user_input:
+            raise HTTPException(
+                status_code=400,
+                detail="user_input is required when resuming with thread_id"
+            )
+        resume_value = request.user_input
+        logger.info(f"Resuming graph execution with user_input: {resume_value[:100] if isinstance(resume_value, str) else 'N/A'}...")
         result = planner.run({}, thread_id=thread_id, resume_value=resume_value)
     else:
         # New execution - user_input is required
@@ -94,9 +103,13 @@ async def plan_trip(
         
         initial_state = {
             "user_input": request.user_input,
-            "user_responses": {},
+            "updated_user_input": request.user_input,
+            "iteration_count": 0,
+            "thumbs_up": request.thumbs_up,
+            "thumbs_down": request.thumbs_down,
         }
-        logger.info(f"Starting new trip planning request: {request.user_input[:100]}...")
+        input_description = request.user_input[:100] if request.user_input else 'N/A'
+        logger.info(f"Starting new trip planning request: {input_description}...")
         result = planner.run(initial_state, thread_id=thread_id)
     
     # Check if execution was interrupted

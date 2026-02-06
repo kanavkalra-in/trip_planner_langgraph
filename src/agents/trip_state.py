@@ -265,6 +265,14 @@ class TripState(TypedDict):
     # Status tracking
     status: Optional[str]  # "in_progress", "needs_clarification", "completed", "error"
     
+    # Iteration support (user providing additional instructions)
+    updated_user_input: Optional[str]  # User's additional/updated instructions for iteration
+    iteration_count: Optional[int]  # Track how many iterations we've done
+    
+    # User feedback (thumbs up/down)
+    thumbs_up: Optional[bool]  # User gave thumbs up feedback
+    thumbs_down: Optional[bool]  # User gave thumbs down feedback
+    
     # Metadata
     current_step: Optional[str]  # Track which node is currently executing
     errors: Annotated[List[str], add]  # Use reducer for error accumulation

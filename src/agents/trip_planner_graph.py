@@ -117,6 +117,8 @@ class TripPlannerGraph:
         
         # Planning flow
         workflow.add_edge("identify_attractions_and_plan", "optimize_and_format_final_plan")
+        
+        # End graph after final plan
         workflow.add_edge("optimize_and_format_final_plan", END)
         
         # Use checkpointer for interrupt support (required by LangGraph)
@@ -269,6 +271,10 @@ class TripPlannerGraph:
                 "status": None,
                 "current_step": None,
                 "errors": [],
+                "updated_user_input": initial_state.get("updated_user_input"),
+                "iteration_count": initial_state.get("iteration_count", 0),
+                "thumbs_up": initial_state.get("thumbs_up"),
+                "thumbs_down": initial_state.get("thumbs_down"),
             }
             input_data = state
             logger.info(f"Starting new graph execution for thread_id: {thread_id}")
