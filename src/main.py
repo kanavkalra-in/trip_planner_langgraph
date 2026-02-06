@@ -19,7 +19,7 @@ load_dotenv(env_path)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
-from src.core.config import settings
+from src.core.trip_planner_container import settings
 from src.core.exception_handlers import ExceptionHandlerRegistry
 from gen_ai_core_lib.dependencies.application_container import ApplicationContainer
 from gen_ai_core_lib.config.logging_config import logger

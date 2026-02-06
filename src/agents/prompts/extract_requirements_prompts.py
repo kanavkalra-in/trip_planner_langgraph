@@ -10,7 +10,10 @@ Rules:
 - Users may mention requirements in any free-form way (timings, amenities, constraints, preferences, etc.).
 - If a requirement is related to travel, accommodation, transport, itinerary, dates, budget, or stay preferences, extract it.
 - If something is ambiguous but clearly travel-related, include it as-is in 'additional_requirements'.
-
+- For duration_days, travel_start_date, travel_end_date: If 2 of these 3 fields are present, calculate the 3rd one:
+  * If travel_start_date and travel_end_date are present, calculate duration_days (inclusive of both dates).
+  * If travel_start_date and duration_days are present, calculate travel_end_date.
+  * If travel_end_date and duration_days are present, calculate travel_start_date.
 Return a JSON object with ONLY the fields that are mentioned by the user.
 
 Supported fields:

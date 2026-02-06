@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 import os
-from src.core.config import settings
+from src.core.trip_planner_container import settings
 
 # Load .env file
 env_path = Path(__file__).parent.parent / ".env"

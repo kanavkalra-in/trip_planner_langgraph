@@ -5,12 +5,11 @@ from pydantic import BaseModel
 from typing import Optional, List, Annotated, Dict, Any
 import uuid
 
-from gen_ai_core_lib.dependencies.application_container import ApplicationContainer
-from gen_ai_core_lib.dependencies.llm_dependencies import get_container
 from gen_ai_core_lib.dependencies.session_dependencies import get_session_from_headers
 from gen_ai_core_lib.session.session_manager import Session
 from gen_ai_core_lib.config.logging_config import logger
 from src.agents.trip_planner_graph import TripPlannerGraph
+from src.api.dependencies import get_trip_planner
 
 router = APIRouter()
 
@@ -42,7 +41,7 @@ class TripResponse(BaseModel):
 async def plan_trip(
     request: TripRequest,
     session: Annotated[Session, Depends(get_session_from_headers)],
-    container: Annotated[ApplicationContainer, Depends(get_container)],
+    planner: Annotated[TripPlannerGraph, Depends(get_trip_planner)],
 ):
     """
     Plan a trip based on chat conversation with interrupt support.
@@ -57,13 +56,11 @@ async def plan_trip(
             - user_input: Required for new requests
             - user_responses: Optional, used to resume from interrupt
         session: User session (automatically created or retrieved from headers/cookies)
-        container: Application container with access to LLM manager, memory manager, etc.
+        planner: Trip planner graph (injected via dependency injection, singleton)
         
     Returns:
         TripResponse with itinerary, clarifying questions, or final plan
     """
-    # Access services from container
-    llm_manager = container.get_llm_manager()
     
     # Generate or use provided thread_id for state persistence
     # Each trip planning conversation gets a unique thread_id, allowing multiple
@@ -77,9 +74,6 @@ async def plan_trip(
         # This ensures uniqueness both within and outside the session
         thread_id = str(uuid.uuid4())
         logger.info(f"Starting new conversation with thread_id: {thread_id}")
-    
-    # Create trip planner graph
-    planner = TripPlannerGraph(llm_manager, model_name="gpt-4o")
     
     # Determine if we're resuming from an interrupt
     is_resuming = request.user_responses is not None and len(request.user_responses) > 0

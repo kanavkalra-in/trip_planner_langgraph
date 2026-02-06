@@ -107,12 +107,12 @@ class TripPlannerGraph:
         )
         
         # After asking questions, conditionally loop back or stop
-        # If we've exceeded the loop limit, stop; otherwise check missing info again
+        # If we've exceeded the loop limit, stop; otherwise re-extract requirements with user responses
         workflow.add_conditional_edges(
             "ask_clarifying_questions",
             self._should_continue_after_questions,
             {
-                "continue_checking": "check_missing_info",
+                "re_extract": "extract_requirements",
                 "stop_needs_info": END
             }
         )
@@ -155,9 +155,9 @@ class TripPlannerGraph:
         
         return "ask_questions" if has_missing else "continue"
     
-    def _should_continue_after_questions(self, state: TripState) -> Literal["continue_checking", "stop_needs_info"]:
+    def _should_continue_after_questions(self, state: TripState) -> Literal["re_extract", "stop_needs_info"]:
         """
-        Determine if we should continue checking after asking questions.
+        Determine if we should continue after asking questions.
         
         When interrupt() is called, the graph pauses. This conditional edge is evaluated
         when the graph resumes (after user provides responses via Command(resume=...)).
@@ -166,16 +166,18 @@ class TripPlannerGraph:
             state: Current trip state (after ask_clarifying_questions)
             
         Returns:
-            "continue_checking" if we should loop back to check_missing_info,
+            "re_extract" if we should re-extract requirements with user responses,
             "stop_needs_info" if we've exceeded loop limit
         """
         loop_count = state.get("clarification_loop_count", 0)
         has_missing = state.get("has_missing_info", False)
         missing_info = state.get("missing_info", [])
+        user_responses = state.get("user_responses", {})
         
         logger.debug(
             f"Checking if should continue after questions: loop_count={loop_count}, "
-            f"limit={self.clarification_loop_limit}, has_missing={has_missing}"
+            f"limit={self.clarification_loop_limit}, has_missing={has_missing}, "
+            f"has_user_responses={bool(user_responses)}"
         )
         
         # If we've exceeded the loop limit and still have missing info, stop
@@ -186,8 +188,19 @@ class TripPlannerGraph:
             )
             return "stop_needs_info"
         
-        # Continue checking (interrupt handling is done via Command(resume=...) in run method)
-        return "continue_checking"
+        # If we have user responses, re-extract requirements to process them
+        # This will update the state with extracted fields from user responses
+        if user_responses:
+            logger.info(
+                f"Re-extracting requirements with user responses. "
+                f"Response keys: {list(user_responses.keys())}"
+            )
+            return "re_extract"
+        
+        # If no user responses but we're here, something unexpected happened
+        # Still try to re-extract (extract_requirements handles missing user_responses gracefully)
+        logger.warning("No user_responses found after ask_clarifying_questions, but continuing anyway")
+        return "re_extract"
     
     def run(
         self, 
@@ -221,8 +234,13 @@ class TripPlannerGraph:
         if resume_value is not None:
             # Resuming from interrupt - the resume_value becomes the return value of interrupt()
             # Pattern: graph.invoke(Command(resume=True), config=config)
+            # The checkpointer will automatically load the previous state for this thread_id
+            # and resume execution from the node that called interrupt()
             input_data = Command(resume=resume_value)
-            logger.info(f"Resuming graph execution for thread_id: {thread_id}")
+            logger.info(
+                f"Resuming graph execution for thread_id: {thread_id} "
+                f"with resume_value keys: {list(resume_value.keys()) if isinstance(resume_value, dict) else 'N/A'}"
+            )
         else:
             # New execution - build state from initial_state
             # Pattern: graph.invoke({"input": "data"}, config=config)
