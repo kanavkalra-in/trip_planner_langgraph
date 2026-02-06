@@ -2,7 +2,7 @@
 """Script to run the FastAPI server."""
 
 import uvicorn
-from src.core.config import settings
+from src.core.trip_planner_container import settings
 
 if __name__ == "__main__":
     uvicorn.run(

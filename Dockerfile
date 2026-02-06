@@ -1,7 +1,5 @@
 # Multi-stage Dockerfile for Trip Planner Application
 
-# Multi-stage Dockerfile for Trip Planner Application
-
 # Stage 1: Build stage
 FROM python:3.11-slim as builder
 
@@ -12,12 +10,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency files
-COPY pyproject.toml ./
+# Upgrade pip, setuptools, wheel first (cached layer)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir \
+# Install all external Python dependencies first
+# This layer is cached separately and only invalidates when dependencies change
+RUN pip install --no-cache-dir --no-warn-script-location \
     fastapi>=0.104.0 \
     uvicorn[standard]>=0.24.0 \
     streamlit>=1.28.0 \
@@ -29,6 +27,17 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pydantic-settings>=2.1.0 \
     python-dotenv>=1.0.0 \
     httpx>=0.25.0
+
+# Now copy source code (this layer invalidates on source changes,
+# but Python dependencies are already installed and cached above)
+COPY gen_ai_core_lib /build/gen_ai_core_lib
+WORKDIR /build/gen_ai_core_lib
+# Install in non-editable mode for production (better for multi-stage builds)
+RUN pip install --no-cache-dir .
+
+# Copy trip_planner_langgraph project files
+WORKDIR /build
+COPY trip_planner_langgraph/ ./trip_planner_langgraph/
 
 # Stage 2: Runtime stage
 FROM python:3.11-slim
@@ -49,7 +58,7 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser trip_planner_langgraph/ .
 
 # Add src to Python path (required for imports)
 ENV PYTHONPATH=/app
